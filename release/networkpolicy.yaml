@@ -8,6 +8,8 @@ kind: NetworkPolicy
 metadata:
   name: backend-allow-same-namespace
   namespace: qket-release
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   podSelector:
     matchLabels:
@@ -21,5 +23,3 @@ spec:
               name: qket-release # 동일 namespace 안에서만 트래픽 허용
       ports:
         - port: 8080
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
