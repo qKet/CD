@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qket-frontend
+  namespace: {{ .Values.namespace }}
+spec:
+  revisionHistoryLimit: {{ .Values.frontend.revisionHistoryLimit }}
+  replicas: {{ .Values.frontend.replicas }}
+  {{- with .Values.frontend.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: qket-frontend
+  template:
+    metadata:
+      labels:
+        app: qket-frontend
+    spec:
+      containers:
+        - name: qket-frontend
+          image: {{ .Values.frontend.image }}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: {{ .Values.frontend.port }}
+          {{- if .Values.frontend.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.frontend.readinessProbe.path }}
+              port: {{ .Values.frontend.port }}
+            initialDelaySeconds: {{ .Values.frontend.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.frontend.readinessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.frontend.readinessProbe.failureThreshold }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.frontend.resources | nindent 12 }}
+          # env:
+          #   - name: BACKEND_URL
+          #     value: "http://qket-backend-service/api"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qket-frontend-service
+  namespace: {{ .Values.namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: qket-frontend
+  ports:
+    - port: 80
+      targetPort: {{ .Values.frontend.port }}

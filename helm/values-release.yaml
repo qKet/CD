@@ -1,0 +1,38 @@
+namespace: qket-release
+
+backend:
+  replicas: 1
+  # S3 업로드용 IRSA — Terraform(module.storage_release)이 만든 서비스어카운트.
+  # 이걸로 뜨면 S3Client가 고정 키 없이 자동으로 이 역할의 임시 자격증명을 씀.
+  serviceAccountName: qket-backend
+  strategy: {} # release는 별도 전략 없음 (k8s 기본 RollingUpdate 25%/25%)
+  readinessProbe:
+    enabled: false
+  configMaps:
+    - app-config
+    - storage-config
+  secrets:
+    - db-secrets
+    - redis-secrets
+
+frontend:
+  replicas: 1
+  strategy: {}
+  readinessProbe:
+    enabled: false
+  resources:
+    requests:
+      cpu: "0.25"
+      memory: "128Mi"
+    limits:
+      cpu: "0.5"
+      memory: "256Mi"
+
+ingress:
+  host: dev.jun979.click # dev 쪽 Route53 추가 필요
+  certificateArn: "arn:aws:acm:ap-northeast-2:727646470302:certificate/5e9cef50-c07b-4988-8317-88a1c5fa8e1c"
+  # inboundCidr: "내IP/32"   # DEV 접속 IP 제한하려면 채우기
+
+networkPolicy:
+  allowedNamespaces:
+    - qket-release # 동일 namespace 안에서만 트래픽 허용
