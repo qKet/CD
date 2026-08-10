@@ -1,0 +1,22 @@
+# 환경(prod/release) 상관없이 진짜로 공통인 값만 여기에 둔다.
+# namespace, replicas, ingress host 등 환경마다 달라지는 값은
+# values-prod.yaml / values-release.yaml에서 정의한다.
+
+backend:
+  image: BACKEND_IMAGE # GitHub Actions에서 sed로 실제 이미지 태그로 치환
+  port: 8080
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "1Gi"
+
+frontend:
+  image: FRONTEND_IMAGE
+  port: 3000
+  revisionHistoryLimit: 2
+
+networkPolicy:
+  port: 8080
