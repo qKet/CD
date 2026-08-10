@@ -1,6 +1,6 @@
 apiVersion: v2
 name: qket
-description: qKet backend/frontend 배포용 chart — kubernetes/prod, kubernetes/release를 통합한 template
+description: qKet backend/frontend 배포 chart — values.yaml(release 기본값) + values-prod.yaml(prod override)
 type: application
 version: 0.1.0
 appVersion: "1.0.0"

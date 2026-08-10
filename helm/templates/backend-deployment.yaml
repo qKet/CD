@@ -5,10 +5,6 @@ metadata:
   namespace: {{ .Values.namespace }}
 spec:
   replicas: {{ .Values.backend.replicas }}
-  {{- with .Values.backend.strategy }}
-  strategy:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
   selector:
     matchLabels:
       app: qket-backend
@@ -18,26 +14,17 @@ spec:
         app: qket-backend
     spec:
       {{- if .Values.backend.serviceAccountName }}
-      # S3 업로드용 IRSA — Terraform(module.storage_release)이 만든 서비스어카운트.
+      # S3 업로드용 IRSA — Terraform(module.storage)이 만든 서비스어카운트.
       # 이걸로 뜨면 S3Client가 고정 키 없이 자동으로 이 역할의 임시 자격증명을 씀.
       serviceAccountName: {{ .Values.backend.serviceAccountName }}
       {{- end }}
       containers:
         - name: qket-backend
-          # GitHub Actions에서 sed로 실제 이미지 태그로 치환
+          # CI가 이미지 push 후 values.yaml의 backend.image를 갱신 (git commit) → ArgoCD가 감지해서 재배포
           image: {{ .Values.backend.image }}
           imagePullPolicy: Always
           ports:
-            - containerPort: {{ .Values.backend.port }}
-          {{- if .Values.backend.readinessProbe.enabled }}
-          readinessProbe:
-            httpGet:
-              path: {{ .Values.backend.readinessProbe.path }}
-              port: {{ .Values.backend.port }}
-            initialDelaySeconds: {{ .Values.backend.readinessProbe.initialDelaySeconds }}
-            periodSeconds: {{ .Values.backend.readinessProbe.periodSeconds }}
-            failureThreshold: {{ .Values.backend.readinessProbe.failureThreshold }}
-          {{- end }}
+            - containerPort: 8080
           envFrom:
             {{- range .Values.backend.configMaps }}
             - configMapRef:
@@ -56,13 +43,10 @@ kind: Service
 metadata:
   name: qket-backend-service
   namespace: {{ .Values.namespace }}
-  labels:
-    app: qket-backend
 spec:
   type: ClusterIP
   selector:
     app: qket-backend
   ports:
-    - name: http
-      port: 80
-      targetPort: {{ .Values.backend.port }}
+    - port: 80
+      targetPort: 8080
