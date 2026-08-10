@@ -6,10 +6,6 @@ metadata:
 spec:
   revisionHistoryLimit: {{ .Values.frontend.revisionHistoryLimit }}
   replicas: {{ .Values.frontend.replicas }}
-  {{- with .Values.frontend.strategy }}
-  strategy:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
   selector:
     matchLabels:
       app: qket-frontend
@@ -20,19 +16,11 @@ spec:
     spec:
       containers:
         - name: qket-frontend
+          # CI가 이미지 push 후 values.yaml의 frontend.image를 갱신 (git commit) → ArgoCD가 감지해서 재배포
           image: {{ .Values.frontend.image }}
           imagePullPolicy: Always
           ports:
-            - containerPort: {{ .Values.frontend.port }}
-          {{- if .Values.frontend.readinessProbe.enabled }}
-          readinessProbe:
-            httpGet:
-              path: {{ .Values.frontend.readinessProbe.path }}
-              port: {{ .Values.frontend.port }}
-            initialDelaySeconds: {{ .Values.frontend.readinessProbe.initialDelaySeconds }}
-            periodSeconds: {{ .Values.frontend.readinessProbe.periodSeconds }}
-            failureThreshold: {{ .Values.frontend.readinessProbe.failureThreshold }}
-          {{- end }}
+            - containerPort: 3000
           resources:
             {{- toYaml .Values.frontend.resources | nindent 12 }}
           # env:
@@ -47,8 +35,8 @@ metadata:
   namespace: {{ .Values.namespace }}
 spec:
   type: ClusterIP
-  selector:
-    app: qket-frontend
   ports:
     - port: 80
-      targetPort: {{ .Values.frontend.port }}
+      targetPort: 3000
+  selector:
+    app: qket-frontend

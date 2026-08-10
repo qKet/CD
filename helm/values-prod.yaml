@@ -1,39 +1,29 @@
+# prod도 release와 동일하게 IRSA로 S3 접근 (고정 키 방식인 aws-secrets는 안 씀).
+# 단, IRSA는 네임스페이스+ServiceAccount 이름 조합으로 신뢰관계가 걸려있어서
+# Terraform 쪽에 qket-prod 네임스페이스용 IRSA Role/ServiceAccount가 별도로 있어야 함
+# (modules/storage/backend-irsa.tf를 prod 네임스페이스로도 인스턴스화 필요).
+
 namespace: qket-prod
 
 backend:
   replicas: 2
-  serviceAccountName: "" # prod는 IRSA 서비스어카운트 안 씀
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
-  readinessProbe:
-    enabled: true
-    path: /api/actuator/health
-    initialDelaySeconds: 60
-    periodSeconds: 10
-    failureThreshold: 6
+  serviceAccountName: qket-backend
   configMaps:
     - app-config
+    - storage-config
   secrets:
     - db-secrets
     - redis-secrets
-    - aws-secrets
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "1Gi"
 
 frontend:
   replicas: 2
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
-  readinessProbe:
-    enabled: true
-    path: /
-    initialDelaySeconds: 30
-    periodSeconds: 10
-    failureThreshold: 6
   resources:
     requests:
       cpu: "0.5"
@@ -45,7 +35,7 @@ frontend:
 ingress:
   host: app.jun979.click
   certificateArn: "arn:aws:acm:ap-northeast-2:727646470302:certificate/a9789e71-7453-43d9-b0db-ad2ac973f4c0"
-  # prod는 모든 사용자 IP inbound 허용 (inboundCidr 안 씀)
+  # prod는 모든 사용자 IP inbound 허용
 
 networkPolicy:
   allowedNamespaces:

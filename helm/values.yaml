@@ -1,10 +1,19 @@
-# 환경(prod/release) 상관없이 진짜로 공통인 값만 여기에 둔다.
-# namespace, replicas, ingress host 등 환경마다 달라지는 값은
-# values-prod.yaml / values-release.yaml에서 정의한다.
+# CI가 이미지 push 후 이 파일의 backend.image / frontend.image 값을 갱신 (git commit)
+# → ArgoCD가 감지해서 재배포. (예전엔 Deployment yaml의 image: 줄을 직접 고쳤지만,
+#   chart로 바뀐 뒤로는 여기 값만 고치면 됨)
+
+namespace: qket-release
 
 backend:
-  image: BACKEND_IMAGE # GitHub Actions에서 sed로 실제 이미지 태그로 치환
-  port: 8080
+  image: BACKEND_IMAGE
+  replicas: 1
+  serviceAccountName: qket-backend
+  configMaps:
+    - app-config
+    - storage-config
+  secrets:
+    - db-secrets
+    - redis-secrets
   resources:
     requests:
       cpu: "250m"
@@ -15,8 +24,21 @@ backend:
 
 frontend:
   image: FRONTEND_IMAGE
-  port: 3000
+  replicas: 1
   revisionHistoryLimit: 2
+  resources:
+    requests:
+      cpu: "0.25"
+      memory: "128Mi"
+    limits:
+      cpu: "0.5"
+      memory: "256Mi"
+
+ingress:
+  host: dev.jun979.click # dev 쪽 Route53 추가 필요
+  certificateArn: "arn:aws:acm:ap-northeast-2:727646470302:certificate/5e9cef50-c07b-4988-8317-88a1c5fa8e1c"
 
 networkPolicy:
+  allowedNamespaces:
+    - qket-release # 동일 namespace 안에서만 트래픽 허용
   port: 8080

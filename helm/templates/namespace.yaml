@@ -1,6 +1,11 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: {{ .Values.namespace }}
-  labels:
-    name: {{ .Values.namespace }} # NetworkPolicy namespaceSelector
+# Terraform(workload/main.tf의 kubernetes_namespace)이 namespace를 직접 관리하기로 해서
+# Helm에서는 주석 처리 — Helm이 namespace를 소유하려고 하면 Terraform 소유 리소스와 충돌남.
+#
+# apiVersion: v1
+# kind: Namespace
+# metadata:
+#   name: {{ .Values.namespace }}
+#   labels:
+#     name: {{ .Values.namespace }}
+#   annotations:
+#     argocd.argoproj.io/sync-wave: "-2"
