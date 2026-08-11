@@ -14,6 +14,7 @@ backend:
   secrets:
     - db-secrets
     - redis-secrets
+    - external-api-secrets #Secret Manager 값 가져오기
   resources:
     requests:
       cpu: "250m"
