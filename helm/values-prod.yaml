@@ -14,6 +14,7 @@ backend:
   secrets:
     - db-secrets
     - redis-secrets
+    - external-api-secrets #Secret Manager 값 가져오기
   resources:
     requests:
       cpu: "250m"
@@ -32,7 +33,6 @@ frontend:
       cpu: "1"
       memory: "500Mi"
 
-# certificateArn은 이제 안 씀 — 실제 Ingress는 Infra(02_k8s-addon)가 만듦, values.yaml 상단 주석 참고.
 ingress:
   host: app.jun979.click
   # prod는 모든 사용자 IP inbound 허용
