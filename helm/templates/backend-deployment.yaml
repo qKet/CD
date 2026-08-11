@@ -34,6 +34,11 @@ spec:
             - secretRef:
                 name: {{ . }}
             {{- end }}
+          env:
+            # 소셜 로그인 완료 후 리다이렉트할 프론트엔드 origin (OAuthController가 씀).
+            # ingress.host를 재사용 — 환경별로 값을 따로 안 적어도 dev/prod가 각자 맞는 값을 가짐.
+            - name: APP_BASE_URL
+              value: "https://{{ .Values.ingress.host }}"
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
 
