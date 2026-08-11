@@ -32,9 +32,9 @@ frontend:
       cpu: "1"
       memory: "500Mi"
 
+# certificateArn은 이제 안 씀 — 실제 Ingress는 Infra(02_k8s-addon)가 만듦, values.yaml 상단 주석 참고.
 ingress:
   host: app.jun979.click
-  certificateArn: "arn:aws:acm:ap-northeast-2:727646470302:certificate/a9789e71-7453-43d9-b0db-ad2ac973f4c0"
   # prod는 모든 사용자 IP inbound 허용
 
 networkPolicy:

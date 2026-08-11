@@ -23,9 +23,13 @@ spec:
             - containerPort: 3000
           resources:
             {{- toYaml .Values.frontend.resources | nindent 12 }}
-          # env:
-          #   - name: BACKEND_URL
-          #     value: "http://qket-backend-service/api"
+          env:
+            # frontend/next.config.js의 rewrites()가 이 값(없으면 http://localhost:8080로 폴백)을
+            # 기준으로 /api/* 요청을 백엔드로 프록시함 — 반드시 CLUSTER_IP여야 함(BACKEND_URL 아님).
+            # path는 안 붙임 — next.config.js가 destination 만들 때 이미 /api/:path*를 뒤에 붙이므로
+            # 여기서 /api까지 넣으면 /api/api/... 로 겹침.
+            - name: CLUSTER_IP
+              value: "http://qket-backend-service"
 
 ---
 apiVersion: v1

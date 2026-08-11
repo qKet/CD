@@ -34,9 +34,13 @@ frontend:
       cpu: "0.5"
       memory: "256Mi"
 
+# 2026-08-10: 실제 Ingress 오브젝트는 이제 여기(Helm/ArgoCD)가 아니라 Infra(02_k8s-addon,
+# kubernetes_ingress_v1.app_ingress)가 만듦 — destroy 시 "Ingress가 alb_controller보다 먼저
+# 없어져야 한다"는 순서를 depends_on으로 강제하려고 같은 Terraform state로 옮김. host만
+# 여기 남겨둔 이유는 backend-deployment.yaml의 APP_BASE_URL(소셜 로그인 리다이렉트)이 참조하기
+# 때문 — Infra 쪽 locals.ingress_config와 같은 값을 나타내지만 용도가 달라서 하나로 합치진 않음.
 ingress:
   host: dev.jun979.click # dev 쪽 Route53 추가 필요
-  certificateArn: "arn:aws:acm:ap-northeast-2:727646470302:certificate/5e9cef50-c07b-4988-8317-88a1c5fa8e1c"
 
 networkPolicy:
   allowedNamespaces:
