@@ -24,7 +24,7 @@ backend:
       memory: "1Gi"
 
 frontend:
-  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:frontend-c8451f0
+  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:frontend-10eb641
   replicas: 1
   revisionHistoryLimit: 2
   resources:
