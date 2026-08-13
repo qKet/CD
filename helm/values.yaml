@@ -5,7 +5,7 @@
 namespace: qket-release
 
 backend:
-  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:backend-cca5048
+  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:backend-01fa505
   replicas: 1
   serviceAccountName: qket-backend
   configMaps:
