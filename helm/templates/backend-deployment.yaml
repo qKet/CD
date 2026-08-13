@@ -52,6 +52,12 @@ kind: Service
 metadata:
   name: qket-backend-service
   namespace: {{ .Values.namespace }}
+  labels:
+    # Service 자체의 라벨 — spec.selector(Pod를 찾는 용도)와는 별개.
+    # ServiceMonitor.spec.selector.matchLabels가 보는 게 바로 이 라벨이라, 이게 없으면
+    # Prometheus가 이 Service를 계속 discover는 하지만 relabel 단계에서 drop해버림
+    # (2026-08-12 실제로 겪음 — qket-backend ServiceMonitor가 targets에 안 잡히던 원인).
+    app: qket-backend
 spec:
   type: ClusterIP
   selector:

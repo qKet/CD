@@ -5,7 +5,8 @@
 namespace: qket-release
 
 backend:
-  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:backend-662a1d8
+
+  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:backend-01fa505
   # KEDA(backend-scaledobject.yaml)가 autoscaling.minReplicas~maxReplicas 사이에서 replicas를
   # 실시간으로 조절함 — 이 값은 그냥 "최초 배포 시 초기값"일 뿐, ArgoCD가 그 이후로 이 필드를
   # 계속 강제하진 않음(02_k8s-addon/argocd-apps.tf의 ignoreDifferences 참고).
@@ -18,10 +19,12 @@ backend:
     minReplicas: 4
     maxReplicas: 8
     targetCPUUtilization: 70
+
   serviceAccountName: qket-backend
   configMaps:
     - app-config
     - storage-config
+    - notification-config
   secrets:
     - db-secrets
     - redis-secrets
@@ -37,7 +40,7 @@ backend:
       memory: "1Gi"
 
 frontend:
-  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:frontend-a765758
+  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:frontend-8a0726d
   replicas: 1
   revisionHistoryLimit: 2
   resources:
