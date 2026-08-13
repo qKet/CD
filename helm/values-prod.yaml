@@ -11,7 +11,6 @@ backend:
   configMaps:
     - app-config
     - storage-config
-    - notification-config
   secrets:
     - db-secrets
     - redis-secrets
