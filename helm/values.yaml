@@ -22,10 +22,10 @@ backend:
     - external-api-secrets #Secret Manager 값 가져오기
   resources:
     requests:
-      cpu: "250m"
+      cpu: "500m"
       memory: "512Mi"
     limits:
-      cpu: "1"
+      cpu: "2"
       memory: "1Gi"
 
 frontend:
