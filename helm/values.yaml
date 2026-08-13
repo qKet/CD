@@ -6,7 +6,10 @@ namespace: qket-release
 
 backend:
   image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:backend-662a1d8
-  replicas: 1
+  # 2026-08-13 부하테스트 대비 — replicas × dbPoolSize 합이 db.t3.micro의 max_connections(~85)를
+  # 넘지 않게 관리(4×15=60, 여유 있게 유지). 실측(8×40=320)에서 커넥션 "생성" 자체가 병목났던 사고 참고.
+  replicas: 4
+  dbPoolSize: 15
   serviceAccountName: qket-backend
   configMaps:
     - app-config

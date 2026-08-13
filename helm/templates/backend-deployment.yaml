@@ -39,6 +39,10 @@ spec:
             # ingress.host를 재사용 — 환경별로 값을 따로 안 적어도 dev/prod가 각자 맞는 값을 가짐.
             - name: APP_BASE_URL
               value: "https://{{ .Values.ingress.host }}"
+            # replicas × 이 값의 합이 RDS max_connections(db.t3.micro 기준 ~85)를 넘지 않게 관리 —
+            # 2026-08-13 부하테스트에서 8replica×40=320으로 잡았다가 커넥션 생성 자체가 병목났던 사고 참고.
+            - name: DB_POOL_SIZE
+              value: "{{ .Values.backend.dbPoolSize }}"
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
 
