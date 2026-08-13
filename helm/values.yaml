@@ -5,11 +5,20 @@
 namespace: qket-release
 
 backend:
+
   image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:backend-01fa505
-  # 2026-08-13 부하테스트 대비 — replicas × dbPoolSize 합이 db.t3.micro의 max_connections(~85)를
-  # 넘지 않게 관리(4×15=60, 여유 있게 유지). 실측(8×40=320)에서 커넥션 "생성" 자체가 병목났던 사고 참고.
+  # KEDA(backend-scaledobject.yaml)가 autoscaling.minReplicas~maxReplicas 사이에서 replicas를
+  # 실시간으로 조절함 — 이 값은 그냥 "최초 배포 시 초기값"일 뿐, ArgoCD가 그 이후로 이 필드를
+  # 계속 강제하진 않음(02_k8s-addon/argocd-apps.tf의 ignoreDifferences 참고).
   replicas: 4
-  dbPoolSize: 15
+  # dbPoolSize는 maxReplicas × dbPoolSize가 RDS max_connections(db.t3.micro 기준 ~85)를
+  # 넘지 않게 잡아야 함 — 지금 8×10=80으로 여유 있게. 2026-08-13 부하테스트(8×40=320으로
+  # 잡았다가 "커넥션 생성" 자체가 병목났던 사고) 이후로 이 계산을 항상 먼저 하기로 함.
+  dbPoolSize: 10
+  autoscaling:
+    minReplicas: 4
+    maxReplicas: 8
+    targetCPUUtilization: 70
 
   serviceAccountName: qket-backend
   configMaps:
@@ -21,6 +30,8 @@ backend:
     - redis-secrets
     - external-api-secrets #Secret Manager 값 가져오기
   resources:
+    # 2026-08-13 부하테스트에서 250m/1로는 CPU 스로틀링이 심하게 걸려서(BCrypt 로그인 검증이
+    # CPU를 많이 씀) 상향 — 지금 노드가 t3.xlarge라 여유 있음
     requests:
       cpu: "500m"
       memory: "512Mi"
