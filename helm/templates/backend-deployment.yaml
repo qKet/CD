@@ -39,6 +39,10 @@ spec:
             # ingress.host를 재사용 — 환경별로 값을 따로 안 적어도 dev/prod가 각자 맞는 값을 가짐.
             - name: APP_BASE_URL
               value: "https://{{ .Values.ingress.host }}"
+            # JVM 기본 시간대가 컨테이너 기본값(UTC)으로 잡혀서, 예매 오픈 알림 스케줄러 등
+            # 시간 비교 로직이 실제 한국시간이랑 9시간 어긋나던 문제(2026-08-18 발견) — 명시적으로 고정
+            - name: TZ
+              value: "Asia/Seoul"
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
 
