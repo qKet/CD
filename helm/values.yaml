@@ -5,7 +5,6 @@
 namespace: qket-release
 
 backend:
-
   image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:backend-01fa505
   # KEDA(backend-scaledobject.yaml)가 autoscaling.minReplicas~maxReplicas 사이에서 replicas를
   # 실시간으로 조절함 — 이 값은 그냥 "최초 배포 시 초기값"일 뿐, ArgoCD가 그 이후로 이 필드를
@@ -40,15 +39,24 @@ backend:
       memory: "1Gi"
 
 frontend:
-  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:frontend-8a0726d
-  replicas: 2
+  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:frontend-a765758
+  replicas: 4
+  autoscaling:
+    minReplicas: 4
+    maxReplicas: 8
+    targetCPUUtilization: 70
+  serviceAccountName: qket-frontend
+
   revisionHistoryLimit: 2
   resources:
+    # frontend(Next.js SSR)는 렌더링이 사실상 단일 스레드라 순간적으로 풀코어(1)를 쓰려고 함 —
+    # limit이 0.5면 그 순간 바로 CFS 스로틀링에 걸려서 응답이 느려짐(backend가 2026-08-13에
+    # BCrypt로 겪은 것과 같은 계열의 문제). limit을 1코어로 올려서 스로틀링 여지를 없앰.
     requests:
-      cpu: "0.25"
+      cpu: "0.5"
       memory: "128Mi"
     limits:
-      cpu: "0.5"
+      cpu: "1"
       memory: "256Mi"
 
 # 2026-08-10: 실제 Ingress 오브젝트는 이제 여기(Helm/ArgoCD)가 아니라 Infra(02_k8s-addon,

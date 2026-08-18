@@ -1,0 +1,24 @@
+# KEDA ScaledObject — qket-frontend를 CPU 사용률 기준으로 자동 스케일(내부적으로 HPA를 만들어서 씀).
+# backend-scaledobject.yaml과 동일 패턴. KEDA 컨트롤러 자체는 Infra(Terraform,
+# modules/addons/keda)가 설치함 — 여긴 "무엇을 어떻게 스케일할지" 규칙만 정의.
+#
+# CPU 스로틀링 자체는 이 리소스가 아니라 values.yaml의 frontend.resources.limits.cpu를
+# 1코어로 올려서 해결함(단일 스레드 SSR이 순간적으로 풀코어를 쓰려다 0.5 limit에 걸리던 문제) —
+# 이 ScaledObject는 그 위에서 "부하가 늘면 replica를 늘린다"만 담당.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: qket-frontend-scaledobject
+  namespace: {{ .Values.namespace }}
+spec:
+  scaleTargetRef:
+    name: qket-frontend
+  minReplicaCount: {{ .Values.frontend.autoscaling.minReplicas }}
+  maxReplicaCount: {{ .Values.frontend.autoscaling.maxReplicas }}
+  # backend와 동일하게 5분간 관찰 후 그 사이 제일 높았던 시점 기준으로 줄임(급한 스케일다운 방지)
+  cooldownPeriod: 300
+  triggers:
+    - type: cpu
+      metricType: Utilization
+      metadata:
+        value: "{{ .Values.frontend.autoscaling.targetCPUUtilization }}"
