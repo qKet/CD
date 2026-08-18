@@ -49,14 +49,18 @@ frontend:
 
   revisionHistoryLimit: 2
   resources:
-    # frontend(Next.js SSR)는 렌더링이 사실상 단일 스레드라 순간적으로 풀코어(1)를 쓰려고 함 —
-    # limit이 0.5면 그 순간 바로 CFS 스로틀링에 걸려서 응답이 느려짐(backend가 2026-08-13에
-    # BCrypt로 겪은 것과 같은 계열의 문제). limit을 1코어로 올려서 스로틀링 여지를 없앰.
+    # frontend(Next.js SSR)는 메인 렌더링은 단일 스레드지만 GC/libuv 스레드풀/V8 백그라운드
+    # 컴파일러 같은 보조 스레드가 같은 cgroup CPU 쿼터를 같이 씀 — 1분 평균 사용량은 낮아도
+    # 이것들이 순간적으로 겹치면 100ms 단위 CFS 쿼터를 넘겨서 스로틀링됨(2026-08-18 실측:
+    # limit을 0.5→1코어로 올린 뒤에도 유휴 수준 부하에서 5분당 1~3회씩 계속 스로틀링 걸림 —
+    # 그라파나 "CPU 스로틀링" 패널 참고). CPU limit을 아예 없애서 하드 쿼터(CFS) 대신
+    # request 기반 fair-share(cgroup cpu.shares)로 스케줄링되게 함 — 이러면 노드에 여유가
+    # 있는 한 스로틀링 자체가 구조적으로 안 걸림. request는 스케줄링 보장값이자 KEDA
+    # Utilization 계산 기준이라 그대로 둠. memory는 계속 limit으로 OOM 시 격리.
     requests:
       cpu: "0.5"
       memory: "128Mi"
     limits:
-      cpu: "1"
       memory: "256Mi"
 
 # 2026-08-10: 실제 Ingress 오브젝트는 이제 여기(Helm/ArgoCD)가 아니라 Infra(02_k8s-addon,
