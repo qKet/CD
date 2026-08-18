@@ -11,7 +11,7 @@ backend:
   configMaps:
     - app-config
     - storage-config
-    - notification-config
+    # notification-config 뺀 이유는 helm/values.yaml 주석 참고 (2026-08-18)
   secrets:
     - db-secrets
     - redis-secrets
@@ -27,11 +27,12 @@ backend:
 frontend:
   replicas: 2
   resources:
+    # CPU limit을 없앤 이유는 helm/values.yaml의 frontend.resources 주석 참고
+    # (2026-08-18, CFS 스로틀링 → request 기반 fair-share로 전환).
     requests:
       cpu: "0.5"
       memory: "250Mi"
     limits:
-      cpu: "1"
       memory: "500Mi"
 
 ingress:
