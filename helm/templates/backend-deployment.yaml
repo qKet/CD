@@ -41,6 +41,8 @@ spec:
               value: "https://{{ .Values.ingress.host }}"
             # replicas × 이 값의 합이 RDS max_connections(db.t3.micro 기준 ~85)를 넘지 않게 관리 —
             # 2026-08-13 부하테스트에서 8replica×40=320으로 잡았다가 커넥션 생성 자체가 병목났던 사고 참고.
+            - name: TZ
+              value: "Asia/Seoul"
             - name: DB_POOL_SIZE
               value: "{{ .Values.backend.dbPoolSize }}"
           resources:
