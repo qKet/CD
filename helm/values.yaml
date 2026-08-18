@@ -5,7 +5,7 @@
 namespace: qket-release
 
 backend:
-  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:backend-01fa505
+  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:backend-3619862
   # KEDA(backend-scaledobject.yaml)가 autoscaling.minReplicas~maxReplicas 사이에서 replicas를
   # 실시간으로 조절함 — 이 값은 그냥 "최초 배포 시 초기값"일 뿐, ArgoCD가 그 이후로 이 필드를
   # 계속 강제하진 않음(02_k8s-addon/argocd-apps.tf의 ignoreDifferences 참고).
@@ -23,11 +23,7 @@ backend:
   configMaps:
     - app-config
     - storage-config
-    # notification-config는 뺌 — 이 이름의 ConfigMap을 만드는 Terraform 리소스가 없어서
-    # CreateContainerConfigError("configmap notification-config not found")로 파드가 못 뜸.
-    # 알림(NOTIFICATION_QUEUE_URL/OPEN_ALERT_QUEUE_URL)은 이미 app-config에 들어있음
-    # (04_data/main.tf의 kubernetes_config_map.app_config 참고, application.yml이 기대하는
-    # 이름과 정확히 일치) — 새 ConfigMap 자체가 필요 없음.
+    #- notification-config
   secrets:
     - db-secrets
     - redis-secrets
@@ -43,7 +39,7 @@ backend:
       memory: "1Gi"
 
 frontend:
-  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:frontend-a765758
+  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:frontend-78ee09c
   replicas: 4
   autoscaling:
     minReplicas: 4
