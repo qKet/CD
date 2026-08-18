@@ -35,7 +35,7 @@ backend:
       cpu: "500m"
       memory: "512Mi"
     limits:
-      cpu: "2"
+      cpu: "3"
       memory: "1Gi"
 
 frontend:
@@ -46,6 +46,7 @@ frontend:
     maxReplicas: 8
     targetCPUUtilization: 70
   serviceAccountName: qket-frontend
+
   revisionHistoryLimit: 2
   resources:
     # frontend(Next.js SSR)는 렌더링이 사실상 단일 스레드라 순간적으로 풀코어(1)를 쓰려고 함 —
