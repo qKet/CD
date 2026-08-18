@@ -39,7 +39,7 @@ backend:
       cpu: "500m"
       memory: "512Mi"
     limits:
-      cpu: "2"
+      cpu: "3"
       memory: "1Gi"
 
 frontend:
@@ -50,6 +50,7 @@ frontend:
     maxReplicas: 8
     targetCPUUtilization: 70
   serviceAccountName: qket-frontend
+
   revisionHistoryLimit: 2
   resources:
     # frontend(Next.js SSR)는 메인 렌더링은 단일 스레드지만 GC/libuv 스레드풀/V8 백그라운드
