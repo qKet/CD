@@ -74,4 +74,7 @@ ingress:
 networkPolicy:
   allowedNamespaces:
     - qket-release # 동일 namespace 안에서만 트래픽 허용
-  port: 8080
+  ports:
+    - 8080 # 일반 API 요청
+    - 8081 # actuator 헬스체크 전용 포트(management.server.port) — ALB가 여기로 헬스체크를
+    #        보내는데, 이 포트를 안 열어두면 NetworkPolicy가 막아서 전부 unhealthy 처리됨
