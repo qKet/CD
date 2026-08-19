@@ -46,18 +46,19 @@ spec:
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
           # 이슈 #28 대응 — ALB 헬스체크와 별개로, Pod 자체가 멈췄을 때 k8s가 스스로 재시작/트래픽 제외를
-          # 판단할 수 있게 함. path는 actuator의 liveness/readiness 그룹(DB·Redis 안 건드림)을 그대로 씀 —
-          # server.servlet.context-path: /api 가 붙어있어서 앞에 /api가 필요함.
+          # 판단할 수 있게 함. path는 actuator의 liveness/readiness 그룹(DB·Redis 안 건드림)을 그대로 씀.
+          # 2026-08-19: management.server.port로 actuator를 8081로 분리하면서 포트/경로 수정 —
+          # 분리된 포트엔 server.servlet.context-path(/api)가 안 붙으므로 /api 프리픽스도 뺌.
           livenessProbe:
             httpGet:
-              path: /api/actuator/health/liveness
-              port: 8080
+              path: /actuator/health/liveness
+              port: 8081
             initialDelaySeconds: 20
             periodSeconds: 10
           readinessProbe:
             httpGet:
-              path: /api/actuator/health/readiness
-              port: 8080
+              path: /actuator/health/readiness
+              port: 8081
             initialDelaySeconds: 10
             periodSeconds: 5
 
