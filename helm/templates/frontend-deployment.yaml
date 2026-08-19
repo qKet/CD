@@ -30,6 +30,21 @@ spec:
             # 여기서 /api까지 넣으면 /api/api/... 로 겹침.
             - name: CLUSTER_IP
               value: "http://qket-backend-service"
+          # ALB 헬스체크(Ingress healthcheck-path: /healthz)와 별개 계층 — 파드 자체가 멈췄을 때
+          # k8s가 스스로 재시작(liveness)/트래픽 제외(readiness) 판단하는 용도. app/healthz/route.ts가
+          # DB/backend 호출 없이 즉시 응답하므로 일반 요청 부하와 무관하게 항상 빠르게 응답 가능.
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
 
 ---
 apiVersion: v1
