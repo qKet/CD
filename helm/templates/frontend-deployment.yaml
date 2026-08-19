@@ -30,6 +30,18 @@ spec:
             # 여기서 /api까지 넣으면 /api/api/... 로 겹침.
             - name: CLUSTER_IP
               value: "http://qket-backend-service"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
 
 ---
 apiVersion: v1
