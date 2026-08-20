@@ -48,6 +48,24 @@ spec:
               value: "{{ .Values.backend.dbPoolSize }}"
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
+          # ALB 헬스체크(Ingress healthcheck-port/path)와 별개 계층 — 이건 파드 자체가 멈췄을 때
+          # k8s가 스스로 재시작(liveness)/트래픽 제외(readiness) 판단하는 용도. management.server.port로
+          # actuator가 8081로 분리돼있어서 포트는 8081, 그리고 그 포트엔 server.servlet.context-path(/api)가
+          #안 붙으므로 경로에 /api를 안 붙임(둘 다 CD PR 리뷰에서 8080/api 프리픽스로 잘못 올라왔던 걸 수정함).
+          # /health/liveness, /health/readiness는 Spring Boot 헬스 그룹 —
+          # management.endpoint.health.probes.enabled=true가 켜져 있어야 존재함(application.yml 참고).
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 5
 
 ---
 apiVersion: v1
