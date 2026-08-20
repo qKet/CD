@@ -10,13 +10,18 @@ backend:
   # 실시간으로 조절함 — 이 값은 그냥 "최초 배포 시 초기값"일 뿐, ArgoCD가 그 이후로 이 필드를
   # 계속 강제하진 않음(02_k8s-addon/argocd-apps.tf의 ignoreDifferences 참고).
   replicas: 4
-  # dbPoolSize는 maxReplicas × dbPoolSize가 RDS max_connections(db.t3.micro 기준 ~85)를
-  # 넘지 않게 잡아야 함 — 지금 8×10=80으로 여유 있게. 2026-08-13 부하테스트(8×40=320으로
-  # 잡았다가 "커넥션 생성" 자체가 병목났던 사고) 이후로 이 계산을 항상 먼저 하기로 함.
-  dbPoolSize: 10
+  # dbPoolSize는 maxReplicas × dbPoolSize가 RDS max_connections를 넘지 않게 잡아야 함.
+  # 2026-08-13 부하테스트(8×40=320으로 잡았다가 "커넥션 생성" 자체가 병목났던 사고) 이후로
+  # 이 계산을 항상 먼저 하기로 함. 2026-08-20: RDS가 db.t3.micro→db.t3.medium으로 올라간 뒤
+  # 이 계산을 안 다시 해서, maxReplicas(12)×dbPoolSize(10)=120이 db.t3.medium의 실제
+  # max_connections(341, RDS 파라미터그룹 기본 공식값)보다 훨씬 작은 값에 계속 묶여있었음
+  # — 2000명 e2e 부하테스트에서 RDS DatabaseConnections가 정확히 120에서 5분 넘게 고정,
+  # HikariCP "Connection is not available" 타임아웃이 10분간 68건 발생하는 걸로 실제 확인.
+  # maxReplicas 20 × dbPoolSize 12 = 240 (341의 약 70%, 여유 남겨둠)로 상향.
+  dbPoolSize: 12
   autoscaling:
     minReplicas: 4
-    maxReplicas: 12
+    maxReplicas: 20
     targetCPUUtilization: 70
 
   serviceAccountName: qket-backend
