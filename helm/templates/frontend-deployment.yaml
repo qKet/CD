@@ -30,6 +30,12 @@ spec:
             # 여기서 /api까지 넣으면 /api/api/... 로 겹침.
             - name: CLUSTER_IP
               value: "http://qket-backend-service"
+            # 컨테이너 기본 시간대가 UTC라 Server Component(app/page.tsx 등)에서 시간대 표시가
+            # 없는 "yyyy-MM-dd HH:mm:ss"(백엔드가 Asia/Seoul 기준으로 내려주는 openTime/roundTime)를
+            # new Date()로 파싱하면 UTC로 잘못 해석돼, 실제로는 예매가 열렸는데도 "예매 전"으로
+            # 표시되는 버그가 있었음(2026-08-21). backend-deployment.yaml과 동일하게 맞춤.
+            - name: TZ
+              value: "Asia/Seoul"
           # ALB 헬스체크(Ingress healthcheck-path: /healthz)와 별개 계층 — 파드 자체가 멈췄을 때
           # k8s가 스스로 재시작(liveness)/트래픽 제외(readiness) 판단하는 용도. app/healthz/route.ts가
           # DB/backend 호출 없이 즉시 응답하므로 일반 요청 부하와 무관하게 항상 빠르게 응답 가능.
