@@ -37,7 +37,7 @@ backend:
       memory: "1Gi"
 
 frontend:
-  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:frontend-b2e8316
+  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:frontend-abe981f
   # backend와 같은 이유(2026-08-21) — release는 개발 서버라 평소엔 최소한만 띄움.
   replicas: 1
   autoscaling:
