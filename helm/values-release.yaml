@@ -8,20 +8,33 @@ backend:
   image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:backend-017ef35
   # KEDA(backend-scaledobject.yaml)가 autoscaling.minReplicas~maxReplicas 사이에서 replicas를
   # 실시간으로 조절함 — 이 값은 그냥 "최초 배포 시 초기값"일 뿐, ArgoCD가 그 이후로 이 필드를
-  # 계속 강제하진 않음(02_k8s-addon/argocd-apps.tf의 ignoreDifferences 참고).
-  replicas: 4
-  # dbPoolSize는 maxReplicas × dbPoolSize가 RDS max_connections를 넘지 않게 잡아야 함.
+  # 계속 강제하진 않음(02_k8s-addon/argocd-apps.tf의 ignoreDifferences 참고). minReplicas(1)와
+  # 맞춤 — release는 개발 서버라 평소엔 최소한만 띄우자는 방침(2026-08-21).
+  replicas: 1
+  # dbPoolSize는 maxReplicas × dbPoolSize가 DB의 max_connections를 넘지 않게 잡아야 함.
   # 2026-08-13 부하테스트(8×40=320으로 잡았다가 "커넥션 생성" 자체가 병목났던 사고) 이후로
   # 이 계산을 항상 먼저 하기로 함. 2026-08-20: RDS가 db.t3.micro→db.t3.medium으로 올라간 뒤
   # 이 계산을 안 다시 해서, maxReplicas(12)×dbPoolSize(10)=120이 db.t3.medium의 실제
   # max_connections(341, RDS 파라미터그룹 기본 공식값)보다 훨씬 작은 값에 계속 묶여있었음
   # — 2000명 e2e 부하테스트에서 RDS DatabaseConnections가 정확히 120에서 5분 넘게 고정,
   # HikariCP "Connection is not available" 타임아웃이 10분간 68건 발생하는 걸로 실제 확인.
-  # maxReplicas 20 × dbPoolSize 12 = 240 (341의 약 70%, 여유 남겨둠)로 상향.
+  # 그때 maxReplicas 20 × dbPoolSize 12 = 240 (341의 약 70%)로 상향했었음.
+  #
+  # 2026-08-21: release가 RDS 대신 dev-datastore(StatefulSet MySQL, mysql:8.0 이미지를 별도
+  # 설정 없이 그대로 씀)로 옮겨가면서 위 240이라는 숫자의 근거(db.t3.medium의 341)가 사라짐 —
+  # dev-mysql pod에 직접 접속해 확인한 실제 max_connections는 151(MySQL 기본값)뿐이라 240은
+  # 이미 초과 상태였음(그동안 실제로 20까지 스케일업한 적이 없어서 안 드러났을 뿐 —
+  # Max_used_connections 실측 62).
+  #
+  # 같은 날 후속 — "release는 어차피 개발 서버니까 최대한 가볍게, 꼭 필요한 만큼만 띄우자"는
+  # 방침에 따라 151 여유 안에서 안전하게 맞추는 수준(maxReplicas 8)보다 더 낮춰서 minReplicas 1
+  # / maxReplicas 2로 재조정 — 평소엔 파드 1개만 떠있다가 팀원이 직접 부하테스트할 때만 잠깐
+  # 2개까지 늘어나는 정도. 12×2=24로 151 대비 여유가 훨씬 큼(대신 이 낮은 replica 수 자체가
+  # release의 실질 처리량 상한이 됨 — 진짜 부하테스트가 필요하면 이 값을 일시적으로 올려야 함).
   dbPoolSize: 12
   autoscaling:
-    minReplicas: 4
-    maxReplicas: 20
+    minReplicas: 1
+    maxReplicas: 2
     targetCPUUtilization: 70
 
   serviceAccountName: qket-backend
@@ -43,10 +56,11 @@ backend:
 
 frontend:
   image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:frontend-875e1a8
-  replicas: 4
+  # backend와 같은 이유(2026-08-21) — release는 개발 서버라 평소엔 최소한만 띄움.
+  replicas: 1
   autoscaling:
-    minReplicas: 4
-    maxReplicas: 8
+    minReplicas: 1
+    maxReplicas: 2
     targetCPUUtilization: 70
   serviceAccountName: qket-frontend
 

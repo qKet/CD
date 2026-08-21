@@ -1,17 +1,42 @@
-# prod도 release와 동일하게 IRSA로 S3 접근 (고정 키 방식인 aws-secrets는 안 씀).
-# 단, IRSA는 네임스페이스+ServiceAccount 이름 조합으로 신뢰관계가 걸려있어서
-# Terraform 쪽에 qket-prod 네임스페이스용 IRSA Role/ServiceAccount가 별도로 있어야 함
-# (modules/storage/backend-irsa.tf를 prod 네임스페이스로도 인스턴스화 필요).
+# prod도 release와 동일하게 IRSA로 S3 접근(고정 키 방식인 aws-secrets는 안 씀). qket-prod
+# 네임스페이스용 IRSA Role/ServiceAccount는 Infra(04_data/prod의 module.storage)가 이미 만들어둠
+# — kubectl로 실제 ServiceAccount(qket-backend, qket-prod ns)의 eks.amazonaws.com/role-arn
+# annotation이 team5-qket-backend-role-prod로 붙어있는 것까지 확인함(2026-08-21).
 
 namespace: qket-prod
 
+# ArgoCD Application(qket-cd)이 values-release.yaml을 먼저 깔고 이 파일로 덮어쓰는 레이어링
+# 구조라(modules/addons/argocd/main.tf의 cd_applications.prod.value_files 참고), 여기서
+# 명시적으로 안 채운 키는 release 값을 그대로 물려받는다. dbPoolSize/autoscaling처럼 "RDS
+# 인스턴스 용량에 맞춰 계산해야 하는" 값들은 release의 계산식이 release 자신의 RDS
+# (db.t3.medium)를 기준으로 한 거라 prod(db.t3.small, Infra/04_data/prod/main.tf의
+# db_instance_class 참고)에 그대로 물려주면 안 됨 — 아래 backend 섹션에서 prod 기준으로
+# 새로 계산해서 명시적으로 덮어씀.
+
 backend:
+  # CI(backend/.github/workflows/CI-main.yml)가 main 브랜치 push마다 이 줄을 갱신함 —
+  # values-release.yaml의 image와 별개로 prod만의 태그를 가짐(레이어링으로 이 값이 release
+  # 값을 덮어씀). 최초 값은 release 최신 태그로 맞춰둠 — 어차피 다음 main push 때 덮어써짐.
+  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:backend-017ef35
   replicas: 2
+  # dbPoolSize/autoscaling.maxReplicas 조합 = RDS max_connections를 안 넘어야 함(2026-08-13
+  # release 부하테스트 사고 — CD/helm/values-release.yaml 주석 참고). prod RDS는
+  # db.t3.small이라 max_connections ≈ 170(DBInstanceClassMemory/12582880 공식, 2GiB/12582880
+  # ≈ 170.67 — release의 db.t3.medium/341과 같은 공식으로 2026-08-21에 직접 재확인함).
+  # dbPoolSize는 release와 같은 12로 맞추고, maxReplicas만 prod RDS 용량에 맞게 8로 낮춤
+  # (8×12=96, 170의 약 56% — prod는 아직 실트래픽/부하테스트 데이터가 없어서 release의 70%보다
+  # 더 보수적으로 잡음). minReplicas는 위 replicas(초기값)와 맞춰 2.
+  dbPoolSize: 12
+  autoscaling:
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilization: 70
+
   serviceAccountName: qket-backend
   configMaps:
     - app-config
     - storage-config
-    # notification-config 뺀 이유는 helm/values.yaml 주석 참고 (2026-08-18)
+    # notification-config 뺀 이유는 helm/values-release.yaml 주석 참고 (2026-08-18)
   secrets:
     - db-secrets
     - redis-secrets
@@ -25,9 +50,20 @@ backend:
       memory: "1Gi"
 
 frontend:
+  # CI(frontend/.github/workflows/CI-main.yml)가 main 브랜치 push마다 이 줄을 갱신함 — backend와
+  # 같은 이유(레이어링으로 release 값을 덮어씀). 최초 값은 release 최신 태그로 맞춰둠.
+  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:frontend-875e1a8
   replicas: 2
+  # backend와 같은 이유로 release(min4/max8)를 그대로 안 물려받고 절반 규모로 명시 — 프론트는
+  # DB 커넥션과 무관하지만(SSR이 backend를 HTTP로 호출할 뿐), backend replica 규모와 비율을
+  # 맞춰두는 게 일관적이라 판단.
+  autoscaling:
+    minReplicas: 2
+    maxReplicas: 4
+    targetCPUUtilization: 70
+  revisionHistoryLimit: 2
   resources:
-    # CPU limit을 없앤 이유는 helm/values.yaml의 frontend.resources 주석 참고
+    # CPU limit을 없앤 이유는 helm/values-release.yaml의 frontend.resources 주석 참고
     # (2026-08-18, CFS 스로틀링 → request 기반 fair-share로 전환).
     requests:
       cpu: "0.5"
@@ -43,3 +79,9 @@ networkPolicy:
   allowedNamespaces:
     - qket-prod
     - monitoring
+  # release와 동일 — 8081은 ALB 헬스체크 전용 포트(management.server.port), 안 열어두면
+  # NetworkPolicy가 막아서 전부 unhealthy 처리됨(helm/values-release.yaml 주석 참고). 원래
+  # release 레이어에서 상속되던 값이라 실질 동작은 같았지만, prod 파일만 보고도 알 수 있게 명시함.
+  ports:
+    - 8080
+    - 8081

@@ -27,7 +27,7 @@ spec:
             - containerPort: 8080
             - containerPort: 8081 # actuator 헬스체크 전용(management.server.port) — ALB가 여기로 헬스체크
           envFrom:
-            {{- range .Values.backend.configMaps }}
+            {{- range .Values.backend.configMaps }}   # configMap 선언 
             - configMapRef:
                 name: {{ . }}
             {{- end }}
