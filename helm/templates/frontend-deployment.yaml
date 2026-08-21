@@ -23,7 +23,10 @@ spec:
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: ScheduleAnyway
+          # 2026-08-21: backend-deployment.yaml과 동일한 이유로 ScheduleAnyway→DoNotSchedule로
+          # 변경 — Karpenter가 있어서 하드 제약으로 둬도 파드가 Pending으로 멈출 위험이 낮고,
+          # 필요하면 노드를 여러 개로 나눠 만들어서 분산을 실제로 강제함.
+          whenUnsatisfiable: DoNotSchedule
           labelSelector:
             matchLabels:
               app: qket-frontend

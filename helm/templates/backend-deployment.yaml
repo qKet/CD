@@ -28,10 +28,16 @@ spec:
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
-          # DoNotSchedule로 하면 노드 여유가 빠듯할 때(캐파시티 분석 문서 참고) 완벽한 분산이
-          # 불가능한 상황에서 파드가 아예 Pending으로 멈출 수 있음 — 최대한 분산하되 안 되면
-          # 그냥 배치는 되게 함.
-          whenUnsatisfiable: ScheduleAnyway
+          # 2026-08-21: ScheduleAnyway(소프트 제약)로 처음 넣었다가 prod 부하테스트에서 그대로
+          # 재현됨 — 스케일업 순간 기존 노드가 전부 꽉 차있으면 Karpenter가 신규 파드 전부를
+          # 수용할 새 노드를 "비용 최적화상 하나만" 만들어버려서, 분산시킬 다른 노드 자체가
+          # 없었음(topologySpreadConstraints는 "이미 있는 노드들 사이" 분산이지 "새 노드를
+          # 몇 개 만들지"는 결정 못 함 — ScheduleAnyway면 그 결정에 개입을 안 함).
+          # DoNotSchedule(하드 제약)로 바꾸면 Karpenter의 스케줄링 시뮬레이션 단계에서 이걸
+          # 필수 조건으로 인식해서, 필요하면 새 노드를 여러 개로 나눠 만들어서라도 분산시킴.
+          # 고정 노드풀이었다면 DoNotSchedule이 "제약 못 맞추면 파드가 Pending으로 멈춤" 위험이
+          # 있었겠지만, Karpenter가 있어서 필요한 만큼 노드를 더 만들어주므로 그 위험이 낮음.
+          whenUnsatisfiable: DoNotSchedule
           labelSelector:
             matchLabels:
               app: qket-backend
