@@ -31,11 +31,9 @@ backend:
     #- notification-config
   secrets:
     - db-secrets
-    - redis-secrets
+    # - redis-secrets
     - external-api-secrets #Secret Manager 값 가져오기
   resources:
-    # 2026-08-13 부하테스트에서 250m/1로는 CPU 스로틀링이 심하게 걸려서(BCrypt 로그인 검증이
-    # CPU를 많이 씀) 상향 — 지금 노드가 t3.xlarge라 여유 있음
     requests:
       cpu: "500m"
       memory: "512Mi"
