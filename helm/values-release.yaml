@@ -9,7 +9,7 @@ backend:
   # KEDA(backend-scaledobject.yaml)가 autoscaling.minReplicas~maxReplicas 사이에서 replicas를
   # 실시간으로 조절함 — 이 값은 그냥 "최초 배포 시 초기값"일 뿐, ArgoCD가 그 이후로 이 필드를
   # 계속 강제하진 않음(02_k8s-addon/argocd-apps.tf의 ignoreDifferences 참고).
-  replicas: 4
+  replicas: 2
   # dbPoolSize는 maxReplicas × dbPoolSize가 RDS max_connections를 넘지 않게 잡아야 함.
   # 2026-08-13 부하테스트(8×40=320으로 잡았다가 "커넥션 생성" 자체가 병목났던 사고) 이후로
   # 이 계산을 항상 먼저 하기로 함. 2026-08-20: RDS가 db.t3.micro→db.t3.medium으로 올라간 뒤
@@ -43,7 +43,7 @@ backend:
 
 frontend:
   image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:frontend-2e92802
-  replicas: 4
+  replicas: 2
   autoscaling:
     minReplicas: 2
     maxReplicas: 3
