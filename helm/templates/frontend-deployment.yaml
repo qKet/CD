@@ -14,6 +14,19 @@ spec:
       labels:
         app: qket-frontend
     spec:
+      # 2026-08-21: backend-deployment.yaml과 동일한 이유(troubleshooting/
+      # backend-cold-start-cpu-contention-during-rollout 참고) — frontend는 CPU limit이
+      # 없어서(request 기반 fair-share, 위 backend와 다른 이유는 이 파일의 frontend.resources
+      # 주석 참고) 여러 파드가 한 노드에 몰리면 그 노드 자체 CPU를 무제한으로 끌어다 쓰려다
+      # 포화시켜서, 같은 노드에 있는 backend 파드까지 덩달아 굶길 수 있음 — 노드별로 고르게
+      # 분산시켜 이 위험을 줄임.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: qket-frontend
       containers:
         - name: qket-frontend
           # CI가 이미지 push 후 values.yaml의 frontend.image를 갱신 (git commit) → ArgoCD가 감지해서 재배포
