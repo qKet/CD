@@ -20,8 +20,8 @@ backend:
   # maxReplicas 20 × dbPoolSize 12 = 240 (341의 약 70%, 여유 남겨둠)로 상향.
   dbPoolSize: 12
   autoscaling:
-    minReplicas: 4
-    maxReplicas: 20
+    minReplicas: 2
+    maxReplicas: 3
     targetCPUUtilization: 70
 
   serviceAccountName: qket-backend
@@ -45,8 +45,8 @@ frontend:
   image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:frontend-2e92802
   replicas: 4
   autoscaling:
-    minReplicas: 4
-    maxReplicas: 8
+    minReplicas: 2
+    maxReplicas: 3
     targetCPUUtilization: 70
   serviceAccountName: qket-frontend
 
