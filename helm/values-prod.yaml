@@ -52,7 +52,7 @@ backend:
 frontend:
   # CI(frontend/.github/workflows/CI-main.yml)가 main 브랜치 push마다 이 줄을 갱신함 — backend와
   # 같은 이유(레이어링으로 release 값을 덮어씀). 최초 값은 release 최신 태그로 맞춰둠.
-  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:frontend-875e1a8
+  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:frontend-5d02c46
   replicas: 2
   # backend와 같은 이유로 release(min4/max8)를 그대로 안 물려받고 절반 규모로 명시 — 프론트는
   # DB 커넥션과 무관하지만(SSR이 backend를 HTTP로 호출할 뿐), backend replica 규모와 비율을
