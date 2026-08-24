@@ -18,17 +18,22 @@ backend:
   # values-release.yaml의 image와 별개로 prod만의 태그를 가짐(레이어링으로 이 값이 release
   # 값을 덮어씀). 최초 값은 release 최신 태그로 맞춰둠 — 어차피 다음 main push 때 덮어써짐.
   image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:backend-cfe0def
-  replicas: 2
+  replicas: 4
   # dbPoolSize/autoscaling.maxReplicas 조합 = RDS max_connections를 안 넘어야 함(2026-08-13
   # release 부하테스트 사고 — CD/helm/values-release.yaml 주석 참고). prod RDS는
   # db.t3.small이라 max_connections ≈ 170(DBInstanceClassMemory/12582880 공식, 2GiB/12582880
   # ≈ 170.67 — release의 db.t3.medium/341과 같은 공식으로 2026-08-21에 직접 재확인함).
-  # dbPoolSize는 release와 같은 12로 맞추고, maxReplicas만 prod RDS 용량에 맞게 8로 낮춤
-  # (8×12=96, 170의 약 56% — prod는 아직 실트래픽/부하테스트 데이터가 없어서 release의 70%보다
-  # 더 보수적으로 잡음). minReplicas는 위 replicas(초기값)와 맞춰 2.
+  # dbPoolSize는 release와 같은 12로 맞추고, maxReplicas는 prod RDS 용량에 맞게 8로 낮춤
+  # (8×12=96, 170의 약 56%).
+  # minReplicas 2→4로 상향(2026-08-24): round 62 2000명 재검증에서 로그인 성공률이 84%까지
+  # 떨어짐 — 원인은 KEDA가 반응하기 전(HealthyHostCount가 2에 몇 분간 머묾, CloudWatch로 확인)
+  # 순간폭증 로그인 요청(bcrypt 검증이라 CPU 비쌈)을 파드 2개가 그대로 다 받아서 CPU 포화·
+  # TargetResponseTime 29초까지 치솟은 것. 상시 4개(48×12=48, 170의 28%)로 올려서 스케일업
+  # 전 구간의 기본 흡수력을 미리 확보 — 근본적으론 KEDA pollingInterval 자체가 느린 것도
+  # 원인이라 다음 후보로 고려할 것.
   dbPoolSize: 12
   autoscaling:
-    minReplicas: 2
+    minReplicas: 4
     maxReplicas: 8
     targetCPUUtilization: 70
 
