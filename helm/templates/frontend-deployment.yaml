@@ -23,10 +23,11 @@ spec:
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
-          # 2026-08-21: backend-deployment.yaml과 동일한 이유로 ScheduleAnyway→DoNotSchedule로
-          # 변경 — Karpenter가 있어서 하드 제약으로 둬도 파드가 Pending으로 멈출 위험이 낮고,
-          # 필요하면 노드를 여러 개로 나눠 만들어서 분산을 실제로 강제함.
-          whenUnsatisfiable: DoNotSchedule
+          # 2026-08-24: backend-deployment.yaml과 동일한 이유로 DoNotSchedule→ScheduleAnyway로
+          # 되돌림 — DoNotSchedule은 신규 노드 여러 개를 기다리느라 스케일업이 느려져서 그동안
+          # 소수 파드가 과부하되는 부작용이 실측으로 확인됨(troubleshooting/
+          # backend-cold-start-cpu-contention-during-rollout 재현 3 참고).
+          whenUnsatisfiable: ScheduleAnyway
           labelSelector:
             matchLabels:
               app: qket-frontend

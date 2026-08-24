@@ -28,16 +28,15 @@ spec:
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
-          # 2026-08-21: ScheduleAnyway(소프트 제약)로 처음 넣었다가 prod 부하테스트에서 그대로
-          # 재현됨 — 스케일업 순간 기존 노드가 전부 꽉 차있으면 Karpenter가 신규 파드 전부를
-          # 수용할 새 노드를 "비용 최적화상 하나만" 만들어버려서, 분산시킬 다른 노드 자체가
-          # 없었음(topologySpreadConstraints는 "이미 있는 노드들 사이" 분산이지 "새 노드를
-          # 몇 개 만들지"는 결정 못 함 — ScheduleAnyway면 그 결정에 개입을 안 함).
-          # DoNotSchedule(하드 제약)로 바꾸면 Karpenter의 스케줄링 시뮬레이션 단계에서 이걸
-          # 필수 조건으로 인식해서, 필요하면 새 노드를 여러 개로 나눠 만들어서라도 분산시킴.
-          # 고정 노드풀이었다면 DoNotSchedule이 "제약 못 맞추면 파드가 Pending으로 멈춤" 위험이
-          # 있었겠지만, Karpenter가 있어서 필요한 만큼 노드를 더 만들어주므로 그 위험이 낮음.
-          whenUnsatisfiable: DoNotSchedule
+          # 2026-08-21: ScheduleAnyway(소프트)→DoNotSchedule(하드)로 한 번 바꿨었는데, 재검증
+          # 부하테스트에서 두 번이나 로그인 대량 실패로 이어짐 — DoNotSchedule은 "몰림"은 막아주지만,
+          # 스케일업 순간 필요한 신규 노드 여러 개가 동시에 뜰 때까지 기다리게 만들어서 스케일업 자체가
+          # 느려지고, 그동안 이미 떠있는 소수 파드가 트래픽을 몰빵으로 받다가 과부하(HPA cpu 399%/70%)
+          # → 로그인 timeout 대량 발생(CLAUDE_LLM_WIKI
+          # troubleshooting/backend-cold-start-cpu-contention-during-rollout 재현 3 참고).
+          # ScheduleAnyway로 되돌림 — 느려도 어디든 빨리 욱여넣는 쪽이 지금 같은 순간 폭증 트래픽
+          # 패턴엔 "노드 하나에 몰리는 것"보다 나은 트레이드오프라고 판단(2026-08-24).
+          whenUnsatisfiable: ScheduleAnyway
           labelSelector:
             matchLabels:
               app: qket-backend
