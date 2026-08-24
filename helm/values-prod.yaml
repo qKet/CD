@@ -17,7 +17,7 @@ backend:
   # CI(backend/.github/workflows/CI-main.yml)가 main 브랜치 push마다 이 줄을 갱신함 —
   # values-release.yaml의 image와 별개로 prod만의 태그를 가짐(레이어링으로 이 값이 release
   # 값을 덮어씀). 최초 값은 release 최신 태그로 맞춰둠 — 어차피 다음 main push 때 덮어써짐.
-  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:backend-017ef35
+  image: 727646470302.dkr.ecr.ap-northeast-2.amazonaws.com/team5/ecr/qket:backend-cfe0def
   replicas: 2
   # dbPoolSize/autoscaling.maxReplicas 조합 = RDS max_connections를 안 넘어야 함(2026-08-13
   # release 부하테스트 사고 — CD/helm/values-release.yaml 주석 참고). prod RDS는
