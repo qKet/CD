@@ -46,12 +46,21 @@ backend:
     - db-secrets
     - redis-secrets
     - external-api-secrets #Secret Manager 값 가져오기
+  # request를 250m→500m로 현실화(2026-08-25): 실제 콜드스타트/로그인폭주 시 파드당 CPU
+  # 사용량이 700~900m까지 튀는데(kubectl top 실측), request가 250m로 너무 작아서 스케줄러가
+  # "이 노드에 아직 여유 있다"고 오판하고 큰 노드(t3.xlarge) 하나에 파드를 계속 몰아넣었음 —
+  # topologySpreadConstraints(ScheduleAnyway)는 소프트 제약이라 이 오판을 못 막았고, 그 결과
+  # 실사용량 기준으로는 포화된 노드에 신규 파드가 계속 얹혀서 콜드스타트 CPU 경합이 재현됨
+  # (round 62 2000명 재검증 중 실측, CLAUDE_LLM_WIKI troubleshooting/
+  # backend-cold-start-cpu-contention-during-rollout 참고). request를 실제 사용량에 더
+  # 가깝게 올려서 스케줄러의 bin-packing 판단 자체를 현실화 — 노드당 실제로 더 들어갈 수
+  # 있는 파드 수가 줄어들어 자연히 분산이 강제됨. limit도 500m 여유를 못 살리므로 1→2로 같이 상향.
   resources:
     requests:
-      cpu: "250m"
+      cpu: "500m"
       memory: "512Mi"
     limits:
-      cpu: "1"
+      cpu: "2"
       memory: "1Gi"
 
 frontend:
