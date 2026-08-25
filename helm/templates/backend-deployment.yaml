@@ -34,9 +34,11 @@ spec:
           # 느려지고, 그동안 이미 떠있는 소수 파드가 트래픽을 몰빵으로 받다가 과부하(HPA cpu 399%/70%)
           # → 로그인 timeout 대량 발생(CLAUDE_LLM_WIKI
           # troubleshooting/backend-cold-start-cpu-contention-during-rollout 재현 3 참고).
-          # ScheduleAnyway로 되돌림 — 느려도 어디든 빨리 욱여넣는 쪽이 지금 같은 순간 폭증 트래픽
-          # 패턴엔 "노드 하나에 몰리는 것"보다 나은 트레이드오프라고 판단(2026-08-24).
-          whenUnsatisfiable: ScheduleAnyway
+          # 2026-08-24: 그래서 ScheduleAnyway로 되돌렸었음.
+          # 2026-08-25: 그 사이 오버프로비저닝(modules/addons/overprovisioning)을 도입해서, DoNotSchedule이
+          # 문제였던 진짜 이유("신규 노드가 뜰 때까지 기다림")를 없앴음 — 이제 분산이 필요한 순간 새 노드를
+          # 기다리는 대신 이미 대기 중인 풍선 파드를 밀어내기만 하면 됨. 그 전제로 DoNotSchedule 재검증.
+          whenUnsatisfiable: DoNotSchedule
           labelSelector:
             matchLabels:
               app: qket-backend

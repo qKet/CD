@@ -27,7 +27,9 @@ spec:
           # 되돌림 — DoNotSchedule은 신규 노드 여러 개를 기다리느라 스케일업이 느려져서 그동안
           # 소수 파드가 과부하되는 부작용이 실측으로 확인됨(troubleshooting/
           # backend-cold-start-cpu-contention-during-rollout 재현 3 참고).
-          whenUnsatisfiable: ScheduleAnyway
+          # 2026-08-25: 오버프로비저닝 도입으로 그 부작용의 전제(신규 노드 대기)가 없어져서
+          # backend와 함께 DoNotSchedule로 재검증.
+          whenUnsatisfiable: DoNotSchedule
           labelSelector:
             matchLabels:
               app: qket-frontend
