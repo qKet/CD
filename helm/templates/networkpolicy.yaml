@@ -18,6 +18,15 @@ spec:
             matchLabels:
               name: {{ . }}
         {{- end }}
+        # ALB(Gateway API, targetType: ip)가 Service를 안 거치고 backend 파드로 직접 붙는 경로 —
+        # ALB ENI는 K8s 파드/네임스페이스 신원이 없어서 위 namespaceSelector로는 절대 안 걸림.
+        # ALB가 실제로 앉아있는 public 서브넷 CIDR을 명시적으로 허용해야 함(2026-08-28 확인:
+        # team5-qket-gw-prod-alb/admin-alb 둘 다 이 두 서브넷). 이게 없으면 NetworkPolicy 강제
+        # 집행 시 API 요청(8080)뿐 아니라 ALB 헬스체크(8081)까지 같이 막혀서 전체 다운으로 이어짐.
+        {{- range .Values.networkPolicy.allowedCidrs }}
+        - ipBlock:
+            cidr: {{ . }}
+        {{- end }}
       ports:
         {{- range .Values.networkPolicy.ports }}
         - port: {{ . }}

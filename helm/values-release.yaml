@@ -74,6 +74,12 @@ ingress:
 networkPolicy:
   allowedNamespaces:
     - qket-release # 동일 namespace 안에서만 트래픽 허용
+  # ALB(targetType: ip)가 Service 안 거치고 파드로 직접 붙는 경로 — namespaceSelector로는 안
+  # 걸리는 트래픽이라 별도로 ipBlock 허용 필요. team5-qket-gw-*-alb 전부 이 두 public 서브넷에
+  # ENI가 있음(2026-08-28 aws elbv2 describe-load-balancers로 확인, Infra/00_network 기준).
+  allowedCidrs:
+    - 10.70.1.0/24 # public-ap-northeast-2a
+    - 10.70.4.0/24 # public-ap-northeast-2b
   ports:
     - 8080 # 일반 API 요청
     - 8081 # actuator 헬스체크 전용 포트(management.server.port) — ALB가 여기로 헬스체크를
