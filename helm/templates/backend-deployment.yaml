@@ -18,26 +18,13 @@ spec:
       # 이걸로 뜨면 S3Client가 고정 키 없이 자동으로 이 역할의 임시 자격증명을 씀.
       serviceAccountName: {{ .Values.backend.serviceAccountName }}
       {{- end }}
-      # 2026-08-21: KEDA 스케일업(또는 롤링배포)으로 신규 파드 여러 개가 같은 노드에 몰려서 뜨면,
-      # JVM 콜드스타트(클래스 로딩+HikariCP 커넥션 풀 한꺼번에 열기)의 CPU 버스트가 그 노드에서
-      # 겹쳐서 순간적으로 CPU가 포화되고, 그 여파로 liveness/readiness probe가 타임아웃 →
-      # 재시작이 반복되는 문제가 실제로 재현됨(CLAUDE_LLM_WIKI
-      # troubleshooting/backend-cold-start-cpu-contention-during-rollout 참고, release에서 먼저
-      # 겪고 이후 prod에서도 재현). 노드별로 최대한 고르게 분산시켜서 이 CPU 버스트가 한 노드에
-      # 겹치는 걸 원천적으로 줄임.
+      # 신규 파드가 몰려 뜨면 JVM 콜드스타트 CPU 버스트가 한 노드에 겹쳐서 liveness/readiness
+      # probe 타임아웃 → 재시작 반복이 재현됨. 노드별로 고르게 분산시켜 완화.
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
-          # 2026-08-21: ScheduleAnyway(소프트)→DoNotSchedule(하드)로 한 번 바꿨었는데, 재검증
-          # 부하테스트에서 두 번이나 로그인 대량 실패로 이어짐 — DoNotSchedule은 "몰림"은 막아주지만,
-          # 스케일업 순간 필요한 신규 노드 여러 개가 동시에 뜰 때까지 기다리게 만들어서 스케일업 자체가
-          # 느려지고, 그동안 이미 떠있는 소수 파드가 트래픽을 몰빵으로 받다가 과부하(HPA cpu 399%/70%)
-          # → 로그인 timeout 대량 발생(CLAUDE_LLM_WIKI
-          # troubleshooting/backend-cold-start-cpu-contention-during-rollout 재현 3 참고).
-          # 2026-08-24: 그래서 ScheduleAnyway로 되돌렸었음.
-          # 2026-08-25: 그 사이 오버프로비저닝(modules/addons/overprovisioning)을 도입해서, DoNotSchedule이
-          # 문제였던 진짜 이유("신규 노드가 뜰 때까지 기다림")를 없앴음 — 이제 분산이 필요한 순간 새 노드를
-          # 기다리는 대신 이미 대기 중인 풍선 파드를 밀어내기만 하면 됨. 그 전제로 DoNotSchedule 재검증.
+          # DoNotSchedule은 한 번 로그인 대량 실패로 롤백된 적 있음(신규 노드를 기다리느라
+          # 스케일업이 늦어짐) — 오버프로비저닝 도입 후 그 원인이 없어져서 재검증 중.
           whenUnsatisfiable: DoNotSchedule
           labelSelector:
             matchLabels:
@@ -61,23 +48,17 @@ spec:
             {{- end }}
           env:
             # 소셜 로그인 완료 후 리다이렉트할 프론트엔드 origin (OAuthController가 씀).
-            # ingress.host를 재사용 — 환경별로 값을 따로 안 적어도 dev/prod가 각자 맞는 값을 가짐.
             - name: APP_BASE_URL
               value: "https://{{ .Values.ingress.host }}"
-            # replicas × 이 값의 합이 RDS max_connections(db.t3.micro 기준 ~85)를 넘지 않게 관리 —
-            # 2026-08-13 부하테스트에서 8replica×40=320으로 잡았다가 커넥션 생성 자체가 병목났던 사고 참고.
+            # replicas × dbPoolSize가 RDS max_connections를 넘지 않게 관리.
             - name: TZ
               value: "Asia/Seoul"
             - name: DB_POOL_SIZE
               value: "{{ .Values.backend.dbPoolSize }}"
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
-          # ALB 헬스체크(Ingress healthcheck-port/path)와 별개 계층 — 이건 파드 자체가 멈췄을 때
-          # k8s가 스스로 재시작(liveness)/트래픽 제외(readiness) 판단하는 용도. management.server.port로
-          # actuator가 8081로 분리돼있어서 포트는 8081, 그리고 그 포트엔 server.servlet.context-path(/api)가
-          #안 붙으므로 경로에 /api를 안 붙임(둘 다 CD PR 리뷰에서 8080/api 프리픽스로 잘못 올라왔던 걸 수정함).
-          # /health/liveness, /health/readiness는 Spring Boot 헬스 그룹 —
-          # management.endpoint.health.probes.enabled=true가 켜져 있어야 존재함(application.yml 참고).
+          # ALB 헬스체크와 별개 계층 — k8s 자체 재시작(liveness)/트래픽 제외(readiness) 판단용.
+          # actuator가 8081로 분리돼있어 포트는 8081, context-path(/api)는 안 붙음.
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
@@ -98,10 +79,8 @@ metadata:
   name: qket-backend-service
   namespace: {{ .Values.namespace }}
   labels:
-    # Service 자체의 라벨 — spec.selector(Pod를 찾는 용도)와는 별개.
-    # ServiceMonitor.spec.selector.matchLabels가 보는 게 바로 이 라벨이라, 이게 없으면
-    # Prometheus가 이 Service를 계속 discover는 하지만 relabel 단계에서 drop해버림
-    # (2026-08-12 실제로 겪음 — qket-backend ServiceMonitor가 targets에 안 잡히던 원인).
+    # ServiceMonitor.spec.selector.matchLabels가 보는 라벨 — 없으면 Prometheus가 relabel
+    # 단계에서 drop해버림.
     app: qket-backend
 spec:
   type: ClusterIP

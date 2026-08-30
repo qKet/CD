@@ -14,21 +14,12 @@ spec:
       labels:
         app: qket-frontend
     spec:
-      # 2026-08-21: backend-deployment.yaml과 동일한 이유(troubleshooting/
-      # backend-cold-start-cpu-contention-during-rollout 참고) — frontend는 CPU limit이
-      # 없어서(request 기반 fair-share, 위 backend와 다른 이유는 이 파일의 frontend.resources
-      # 주석 참고) 여러 파드가 한 노드에 몰리면 그 노드 자체 CPU를 무제한으로 끌어다 쓰려다
-      # 포화시켜서, 같은 노드에 있는 backend 파드까지 덩달아 굶길 수 있음 — 노드별로 고르게
-      # 분산시켜 이 위험을 줄임.
+      # backend-deployment.yaml과 동일한 이유 — frontend는 CPU limit이 없어서 한 노드에
+      # 몰리면 그 노드를 포화시켜 같은 노드의 backend 파드까지 굶길 수 있음.
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
-          # 2026-08-24: backend-deployment.yaml과 동일한 이유로 DoNotSchedule→ScheduleAnyway로
-          # 되돌림 — DoNotSchedule은 신규 노드 여러 개를 기다리느라 스케일업이 느려져서 그동안
-          # 소수 파드가 과부하되는 부작용이 실측으로 확인됨(troubleshooting/
-          # backend-cold-start-cpu-contention-during-rollout 재현 3 참고).
-          # 2026-08-25: 오버프로비저닝 도입으로 그 부작용의 전제(신규 노드 대기)가 없어져서
-          # backend와 함께 DoNotSchedule로 재검증.
+          # 오버프로비저닝 도입 이후 backend와 함께 DoNotSchedule로 재검증 중(backend-deployment.yaml 참고).
           whenUnsatisfiable: DoNotSchedule
           labelSelector:
             matchLabels:
@@ -43,21 +34,16 @@ spec:
           resources:
             {{- toYaml .Values.frontend.resources | nindent 12 }}
           env:
-            # frontend/next.config.js의 rewrites()가 이 값(없으면 http://localhost:8080로 폴백)을
-            # 기준으로 /api/* 요청을 백엔드로 프록시함 — 반드시 CLUSTER_IP여야 함(BACKEND_URL 아님).
-            # path는 안 붙임 — next.config.js가 destination 만들 때 이미 /api/:path*를 뒤에 붙이므로
-            # 여기서 /api까지 넣으면 /api/api/... 로 겹침.
+            # next.config.js의 rewrites()가 이 값 기준으로 /api/* 를 백엔드로 프록시함 —
+            # path는 안 붙임(destination에서 이미 /api/:path*를 붙이므로 겹침).
             - name: CLUSTER_IP
               value: "http://qket-backend-service"
-            # 컨테이너 기본 시간대가 UTC라 Server Component(app/page.tsx 등)에서 시간대 표시가
-            # 없는 "yyyy-MM-dd HH:mm:ss"(백엔드가 Asia/Seoul 기준으로 내려주는 openTime/roundTime)를
-            # new Date()로 파싱하면 UTC로 잘못 해석돼, 실제로는 예매가 열렸는데도 "예매 전"으로
-            # 표시되는 버그가 있었음(2026-08-21). backend-deployment.yaml과 동일하게 맞춤.
+            # 컨테이너 기본 UTC라 백엔드가 내려주는 시간 문자열을 잘못 파싱하던 버그 있었음 —
+            # backend-deployment.yaml과 동일하게 맞춤.
             - name: TZ
               value: "Asia/Seoul"
-          # ALB 헬스체크(Ingress healthcheck-path: /healthz)와 별개 계층 — 파드 자체가 멈췄을 때
-          # k8s가 스스로 재시작(liveness)/트래픽 제외(readiness) 판단하는 용도. app/healthz/route.ts가
-          # DB/backend 호출 없이 즉시 응답하므로 일반 요청 부하와 무관하게 항상 빠르게 응답 가능.
+          # ALB 헬스체크와 별개 계층 — k8s 자체 재시작(liveness)/트래픽 제외(readiness) 판단용.
+          # app/healthz/route.ts는 DB/backend 호출 없이 즉시 응답.
           livenessProbe:
             httpGet:
               path: /healthz
